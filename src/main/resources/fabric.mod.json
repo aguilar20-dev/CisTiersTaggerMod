@@ -11,6 +11,9 @@
       "dev.aguilar20dev.cistierstagger.CisTiersTagger"
     ]
   },
+  "mixins": [
+    "cistierstagger.mixins.json"
+  ],
   "depends": {
     "fabricloader": ">=0.18.0",
     "minecraft": "1.21.11",
