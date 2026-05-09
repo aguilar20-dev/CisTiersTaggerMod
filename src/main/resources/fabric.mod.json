@@ -5,6 +5,7 @@
   "name": "CisTiersTagger",
   "description": "show tiers in cistiers",
   "authors": ["aguilar20-dev"],
+  "icon": "assets/cistierstagger/icon.png",
   "environment": "client",
   "entrypoints": {
     "main": [
