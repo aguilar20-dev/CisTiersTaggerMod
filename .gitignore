@@ -1,0 +1,41 @@
+# Gradle
+.gradle/
+build/
+out/
+
+# Fabric Loom / Minecraft run files
+run/
+*.log
+*.log.gz
+crash-reports/
+
+# Compiled output
+bin/
+*.class
+*.jar
+*.war
+*.nar
+*.ear
+
+# IDE files
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.project
+.classpath
+.settings/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local Codex/agent workspace data
+.codex/
+.agents/
+
+# Local environment files
+.env
+.env.*
+!.env.example
