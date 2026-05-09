@@ -5,7 +5,7 @@
   "name": "CisTiersTagger",
   "description": "show tiers in cistiers",
   "authors": ["aguilar20-dev"],
-  "environment": "*",
+  "environment": "client",
   "entrypoints": {
     "main": [
       "dev.aguilar20dev.cistierstagger.CisTiersTagger"

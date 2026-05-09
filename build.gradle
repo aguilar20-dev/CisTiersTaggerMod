@@ -29,6 +29,21 @@ processResources {
     }
 }
 
+def defaultModOutputDir = "/mnt/c/Users/aguilar20-dev/AppData/Roaming/AstralRinthApp/profiles/uku_s pvp modpack/mods"
+
+tasks.register("buildToMods", Copy) {
+    dependsOn remapJar
+
+    from remapJar.archiveFile
+    into providers.gradleProperty("modOutputDir")
+            .map { file(it) }
+            .orElse(file(defaultModOutputDir))
+}
+
+tasks.named("build") {
+    finalizedBy("buildToMods")
+}
+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
