@@ -12,6 +12,7 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallba
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.PlayerListEntry;
+import net.minecraft.command.CommandSource;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
@@ -47,11 +48,11 @@ public class CisTiersCommand {
       return builder.buildFuture();
     }
 
-    for (PlayerListEntry player : client.getNetworkHandler().getPlayerList()) {
-      builder.suggest(player.getProfile().name());
-    }
-
-    return builder.buildFuture();
+    return CommandSource.suggestMatching(
+        client.getNetworkHandler().getPlayerList().stream()
+            .map(PlayerListEntry::getProfile)
+            .map(profile -> profile.name()),
+        builder);
   }
 
   private static int showProfile(CommandContext<FabricClientCommandSource> context) {
