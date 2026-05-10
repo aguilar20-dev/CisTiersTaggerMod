@@ -7,65 +7,64 @@ import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import dev.aguilar20dev.cistierstagger.api.CisTiersApiClient;
 import dev.aguilar20dev.cistierstagger.model.TierProfile;
 import java.util.concurrent.CompletableFuture;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.PlayerListEntry;
-import net.minecraft.command.CommandSource;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.MutableComponent;
 
 public class CisTiersCommand {
   private static final CisTiersApiClient API_CLIENT = new CisTiersApiClient();
 
   public static void register() {
     ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
-      dispatcher.register(ClientCommandManager.literal("cistiers")
+      dispatcher.register(ClientCommands.literal("cistiers")
           .executes(CisTiersCommand::showHelp)
-          .then(ClientCommandManager.argument("username", StringArgumentType.word())
+          .then(ClientCommands.argument("username", StringArgumentType.word())
               .suggests(CisTiersCommand::suggestOnlinePlayers)
               .executes(CisTiersCommand::showProfile)));
     });
   }
 
   private static int showHelp(CommandContext<FabricClientCommandSource> context) {
-    context.getSource().sendFeedback(prefix().append(Text.literal(" Доступные команды:")
-        .formatted(Formatting.GRAY)));
-    context.getSource().sendFeedback(Text.literal("/cistiers <nickname>")
-        .formatted(Formatting.YELLOW)
-        .append(Text.literal(" - показать тиры игрока").formatted(Formatting.GRAY)));
+    context.getSource().sendFeedback(prefix().append(Component.literal(" Доступные команды:")
+        .withStyle(ChatFormatting.GRAY)));
+    context.getSource().sendFeedback(Component.literal("/cistiers <nickname>")
+        .withStyle(ChatFormatting.YELLOW)
+        .append(Component.literal(" - показать тиры игрока").withStyle(ChatFormatting.GRAY)));
     return 1;
   }
 
   private static CompletableFuture<Suggestions> suggestOnlinePlayers(
       CommandContext<FabricClientCommandSource> context,
       SuggestionsBuilder builder) {
-    MinecraftClient client = MinecraftClient.getInstance();
+      Minecraft client = Minecraft.getInstance();
 
-    if (client.getNetworkHandler() == null) {
+      if (client.getConnection() == null) {
+          return builder.buildFuture();
+      }
+
+      for (PlayerInfo player : client.getConnection().getOnlinePlayers()) {
+          builder.suggest(player.getProfile().name());
+      }
+
       return builder.buildFuture();
-    }
-
-    return CommandSource.suggestMatching(
-        client.getNetworkHandler().getPlayerList().stream()
-            .map(PlayerListEntry::getProfile)
-            .map(profile -> profile.name()),
-        builder);
   }
 
   private static int showProfile(CommandContext<FabricClientCommandSource> context) {
     String username = StringArgumentType.getString(context, "username");
     FabricClientCommandSource source = context.getSource();
-    source.sendFeedback(prefix().append(Text.literal(" Загружаю профиль игрока ")
-        .formatted(Formatting.GRAY))
-        .append(Text.literal(username).formatted(Formatting.AQUA)));
+    source.sendFeedback(prefix().append(Component.literal(" Загружаю профиль игрока ")
+        .withStyle(ChatFormatting.GRAY))
+        .append(Component.literal(username).withStyle(ChatFormatting.AQUA)));
 
     API_CLIENT.fetchProfile(username)
-        .thenAccept(profile -> MinecraftClient.getInstance().execute(() -> sendProfile(source, profile)))
+        .thenAccept(profile -> Minecraft.getInstance().execute(() -> sendProfile(source, profile)))
         .exceptionally(error -> {
-          MinecraftClient.getInstance().execute(() -> sendError(source, username, error));
+            Minecraft.getInstance().execute(() -> sendError(source, username, error));
           return null;
         });
 
@@ -73,50 +72,50 @@ public class CisTiersCommand {
   }
 
   private static void sendProfile(FabricClientCommandSource source, TierProfile profile) {
-    source.sendFeedback(Text.literal(""));
+    source.sendFeedback(Component.literal(""));
     source.sendFeedback(prefix()
-        .append(Text.literal(" " + profile.nickname()).formatted(Formatting.AQUA, Formatting.BOLD))
-        .append(Text.literal(" | ").formatted(Formatting.DARK_GRAY))
-        .append(Text.literal(profile.restricted() ? "RESTRICTED" : "NOT RESTRICTED")
-            .formatted(profile.restricted() ? Formatting.RED : Formatting.GREEN)));
+        .append(Component.literal(" " + profile.nickname()).withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD))
+        .append(Component.literal(" | ").withStyle(ChatFormatting.DARK_GRAY))
+        .append(Component.literal(profile.restricted() ? "RESTRICTED" : "NOT RESTRICTED")
+            .withStyle(profile.restricted() ? ChatFormatting.RED : ChatFormatting.GREEN)));
 
-    MutableText stats = Text.literal("  Место: ").formatted(Formatting.GRAY)
-        .append(Text.literal(profile.rankPosition() > 0 ? "#" + profile.rankPosition() : "N/A")
-            .formatted(Formatting.GOLD))
-        .append(Text.literal("  Очки: ").formatted(Formatting.GRAY))
-        .append(Text.literal(String.valueOf(profile.totalPoints())).formatted(Formatting.YELLOW));
+      MutableComponent stats = Component.literal("  Место: ").withStyle(ChatFormatting.GRAY)
+        .append(Component.literal(profile.rankPosition() > 0 ? "#" + profile.rankPosition() : "N/A")
+            .withStyle(ChatFormatting.GOLD))
+        .append(Component.literal("  Очки: ").withStyle(ChatFormatting.GRAY))
+        .append(Component.literal(String.valueOf(profile.totalPoints())).withStyle(ChatFormatting.YELLOW));
     source.sendFeedback(stats);
 
     if (profile.tiers().isEmpty()) {
-      source.sendFeedback(Text.literal("  У игрока нет тиров.").formatted(Formatting.DARK_GRAY));
+      source.sendFeedback(Component.literal("  У игрока нет тиров.").withStyle(ChatFormatting.DARK_GRAY));
       return;
     }
 
-    source.sendFeedback(Text.literal("  Текущие тиры:").formatted(Formatting.GRAY));
+    source.sendFeedback(Component.literal("  Текущие тиры:").withStyle(ChatFormatting.GRAY));
     for (TierProfile.TierEntry tier : profile.tiers()) {
-      source.sendFeedback(Text.literal("  " + kitIcon(tier.kit()) + " ")
-          .formatted(Formatting.DARK_GRAY)
-          .append(Text.literal(formatKit(tier.kit())).formatted(Formatting.WHITE))
-          .append(Text.literal("  "))
-          .append(Text.literal(tier.tier().toUpperCase()).formatted(tierColor(tier.tier()), Formatting.BOLD))
-          .append(Text.literal("  "))
-          .append(Text.literal(tier.points() + " очк.").formatted(Formatting.GRAY)));
+      source.sendFeedback(Component.literal("  " + kitIcon(tier.kit()) + " ")
+          .withStyle(ChatFormatting.DARK_GRAY)
+          .append(Component.literal(formatKit(tier.kit())).withStyle(ChatFormatting.WHITE))
+          .append(Component.literal("  "))
+          .append(Component.literal(tier.tier().toUpperCase()).withStyle(tierColor(tier.tier()), ChatFormatting.BOLD))
+          .append(Component.literal("  "))
+          .append(Component.literal(tier.points() + " очк.").withStyle(ChatFormatting.GRAY)));
     }
   }
 
   private static void sendError(FabricClientCommandSource source, String username, Throwable error) {
     Throwable cause = unwrap(error);
     if (cause instanceof CisTiersApiClient.PlayerNotFoundException) {
-      source.sendFeedback(prefix().append(Text.literal(" У игрока ")
-          .formatted(Formatting.GRAY))
-          .append(Text.literal(username).formatted(Formatting.YELLOW))
-          .append(Text.literal(" нет тиров.").formatted(Formatting.GRAY)));
+      source.sendFeedback(prefix().append(Component.literal(" У игрока ")
+          .withStyle(ChatFormatting.GRAY))
+          .append(Component.literal(username).withStyle(ChatFormatting.YELLOW))
+          .append(Component.literal(" нет тиров.").withStyle(ChatFormatting.GRAY)));
       return;
     }
 
-    source.sendFeedback(prefix().append(Text.literal(" Не удалось загрузить профиль: ")
-        .formatted(Formatting.RED))
-        .append(Text.literal(cause.getMessage()).formatted(Formatting.GRAY)));
+    source.sendFeedback(prefix().append(Component.literal(" Не удалось загрузить профиль: ")
+        .withStyle(ChatFormatting.RED))
+        .append(Component.literal(cause.getMessage()).withStyle(ChatFormatting.GRAY)));
   }
 
   private static Throwable unwrap(Throwable error) {
@@ -127,8 +126,8 @@ public class CisTiersCommand {
     return error;
   }
 
-  private static MutableText prefix() {
-    return Text.literal("[CisTiers]").formatted(Formatting.LIGHT_PURPLE, Formatting.BOLD);
+  private static MutableComponent prefix() {
+    return Component.literal("[CisTiers]").withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD);
   }
 
   private static String formatKit(String kit) {
@@ -153,14 +152,14 @@ public class CisTiersCommand {
     };
   }
 
-  private static Formatting tierColor(String tier) {
+  private static ChatFormatting tierColor(String tier) {
     return switch (tier.toLowerCase()) {
-      case "ht1", "lt1" -> Formatting.GOLD;
-      case "ht2", "lt2" -> Formatting.LIGHT_PURPLE;
-      case "ht3", "lt3" -> Formatting.AQUA;
-      case "ht4", "lt4" -> Formatting.GREEN;
-      case "ht5", "lt5" -> Formatting.GRAY;
-      default -> Formatting.WHITE;
+      case "ht1", "lt1" -> ChatFormatting.GOLD;
+      case "ht2", "lt2" -> ChatFormatting.LIGHT_PURPLE;
+      case "ht3", "lt3" -> ChatFormatting.AQUA;
+      case "ht4", "lt4" -> ChatFormatting.GREEN;
+      case "ht5", "lt5" -> ChatFormatting.GRAY;
+      default -> ChatFormatting.WHITE;
     };
   }
 }

@@ -7,14 +7,14 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
 
 public class CisTiersTagService {
   private static final CisTiersApiClient API_CLIENT = new CisTiersApiClient();
   private static final Map<String, CacheEntry> CACHE = new ConcurrentHashMap<>();
 
-  public Optional<Text> getTag(String username) {
+  public Optional<Component> getTag(String username) {
     if (username == null || username.isBlank()) {
       return Optional.empty();
     }
@@ -29,14 +29,14 @@ public class CisTiersTagService {
     return entry.tag;
   }
 
-  public Text appendTag(String username, Text original) {
-    Optional<Text> tag = getTag(username);
+  public Component appendTag(String username, Component original) {
+    Optional<Component> tag = getTag(username);
     if (tag.isEmpty()) {
       return original;
     }
 
     return tag.get().copy()
-        .append(Text.literal(" | ").formatted(Formatting.DARK_GRAY))
+        .append(Component.literal(" | ").withStyle(ChatFormatting.DARK_GRAY))
         .append(original);
   }
 
@@ -50,13 +50,13 @@ public class CisTiersTagService {
         });
   }
 
-  private static Optional<Text> createBestTierTag(TierProfile profile) {
+  private static Optional<Component> createBestTierTag(TierProfile profile) {
     return profile.tiers().stream()
         .min(Comparator.comparingInt(CisTiersTagService::tierPriority))
-        .map(tier -> Text.literal(kitIcon(tier.kit()) + " ")
-            .formatted(Formatting.DARK_GRAY)
-            .append(Text.literal(tier.tier().toUpperCase(Locale.ROOT))
-                .formatted(tierColor(tier.tier()), Formatting.BOLD)));
+        .map(tier -> Component.literal(kitIcon(tier.kit()) + " ")
+            .withStyle(ChatFormatting.DARK_GRAY)
+            .append(Component.literal(tier.tier().toUpperCase(Locale.ROOT))
+                .withStyle(tierColor(tier.tier()), ChatFormatting.BOLD)));
   }
 
   private static int tierPriority(TierProfile.TierEntry tier) {
@@ -94,18 +94,18 @@ public class CisTiersTagService {
     };
   }
 
-  private static Formatting tierColor(String tier) {
+  private static ChatFormatting tierColor(String tier) {
     return switch (tier.toLowerCase(Locale.ROOT).replaceFirst("^r", "")) {
-      case "ht1", "lt1" -> Formatting.GOLD;
-      case "ht2", "lt2" -> Formatting.LIGHT_PURPLE;
-      case "ht3", "lt3" -> Formatting.AQUA;
-      case "ht4", "lt4" -> Formatting.GREEN;
-      case "ht5", "lt5" -> Formatting.GRAY;
-      default -> Formatting.WHITE;
+      case "ht1", "lt1" -> ChatFormatting.GOLD;
+      case "ht2", "lt2" -> ChatFormatting.LIGHT_PURPLE;
+      case "ht3", "lt3" -> ChatFormatting.AQUA;
+      case "ht4", "lt4" -> ChatFormatting.GREEN;
+      case "ht5", "lt5" -> ChatFormatting.GRAY;
+      default -> ChatFormatting.WHITE;
     };
   }
 
   private static class CacheEntry {
-    private volatile Optional<Text> tag = Optional.empty();
+    private volatile Optional<Component> tag = Optional.empty();
   }
 }
